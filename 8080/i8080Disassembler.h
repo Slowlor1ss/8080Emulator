@@ -1,11 +1,99 @@
 #pragma once
 #include <iostream>
 
-struct opcode {
+struct Opcode
+{
 	int code;
 	const char* mnemonic;
 	unsigned char sizeBytes;
 };
+
+//https://stackoverflow.com/questions/53020776/how-appropriate-is-it-to-use-a-union-to-simulate-cpu-registers-in-an-emulator
+//template <typename T, std::size_t Offset>
+//class byte_ref {
+//	T* mValue;
+//
+//public:
+//	byte_ref(T& value) : mValue(&value) {
+//	}
+//
+//	operator std::uint8_t() {
+//		return (*mValue >> Offset) & 0xFF;
+//	}
+//
+//	byte_ref& operator=(std::uint8_t rhs) {
+//		*mValue = (*mValue & ~(0xFF << Offset)) | (rhs << Offset);
+//		return *this;
+//	}
+//};
+//
+//struct register_t {
+//	std::uint16_t value;
+//
+//	auto l() {
+//		return byte_ref<std::uint16_t, 0>(value);
+//	}
+//
+//	auto h() {
+//		return byte_ref<std::uint16_t, 8>(value);
+//	}
+//};
+//
+//struct State8080
+//{
+//	// A is the primary 8-bit accumulator
+//	uint8_t a;
+//
+//	// 3 16-bit registers (BC, DE, HL)
+//	// that can function as 6 8-bit registers (B, C, D, E, H, L)
+//	union
+//	{
+//		struct
+//		{
+//			uint8_t C;
+//			uint8_t B;
+//		};
+//		uint16_t BC;
+//	};
+//	union
+//	{
+//		struct
+//		{
+//			uint8_t E;
+//			uint8_t D;
+//		};
+//		uint16_t DE;
+//	};
+//	union
+//	{
+//		struct
+//		{
+//			uint8_t L;
+//			uint8_t H;
+//		};
+//		uint16_t HL;
+//	};
+//
+//	uint16_t SP;
+//	uint16_t PC;
+//
+//	union
+//	{
+//		struct ConditionBits // file://Resources/8080-Programmers-Manual.pdf ConditionBits p.11 in pdf or p.5 in the book
+//		{
+//			bool C : 1;  //carry bit
+//			bool : 1;
+//			bool P : 1;  //parity bit
+//			bool : 1;
+//			bool AC : 1; //auxiliary carry bit
+//			bool : 1;
+//			bool Z : 1;  //zero bit
+//			bool S : 1;  //sign bit
+//		};
+//		uint8_t PSW; //program status word
+//	};
+//};
+
 
 class i8080Emulator
 {
@@ -21,8 +109,15 @@ public:
 	static int printDisassembledRom(const uint8_t* codebuffer, int pc);
 
 private:
+
+	//http://www.computerarcheology.com/Arcade/SpaceInvaders/RAMUse.html
+	static constexpr int MEMORY_SIZE = 0x4000;
+	static constexpr int ROM_SIZE = 0x2000;
+	static constexpr int STACK_START = 0x2400;
+	static constexpr int PROGRAM_START = 0x0000;
+
 	//copied opcodes from https://github.com/mlima/8080/blob/master/disassemble.cpp
-	static constexpr opcode Opcodes[256]
+	static constexpr Opcode OPCODES[256]
 	{
 	{ 0x0,"NOP", 1 },
 	{ 0x1,"LXI B", 3 },

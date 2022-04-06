@@ -6,7 +6,7 @@
 int i8080Emulator::printDisassembledRom(const uint8_t* codebuffer, const int pc)
 {
 	const unsigned char* code = &codebuffer[pc];
-	const opcode op = Opcodes[*code];
+	const Opcode op = OPCODES[*code];
 	std::cout << std::setw(4) << std::setfill('0') << std::hex << pc << ' ';
 	std::cout << std::setw(2) << std::setfill('0') << std::hex << op.code << '\t';
 

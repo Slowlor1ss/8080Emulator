@@ -2,12 +2,17 @@
 #include <iostream>
 #include "i8080Disassembler.h"
 
-int main(int /*argc*/, char** argv)
+int main(int argc, char** argv)
 {
-	std::ifstream file(argv[1], std::ios::in | std::ios::binary);
-    if (!file)
+	std::ifstream file{};
+    if (argc == 2)
+	    file.open(argv[1], std::ios::in | std::ios::binary);
+    else
+	    file.open("../Roms/invaders.rom", std::ios::in | std::ios::binary);
+
+	if (!file)
     {
-        std::cerr << "Couldn't open: " << argv[1] << '\n';
+        std::cerr << "Couldn't open file" << '\n';
         exit(1);
     }
 
