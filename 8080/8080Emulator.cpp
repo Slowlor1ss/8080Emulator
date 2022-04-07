@@ -4,36 +4,17 @@
 
 int main(int argc, char** argv)
 {
-	std::ifstream file{};
+	i8080Emulator* i8080;
     if (argc == 2)
-	    file.open(argv[1], std::ios::in | std::ios::binary);
+        i8080 = new i8080Emulator{ argv[1] };
     else
-	    file.open("../Roms/invaders.rom", std::ios::in | std::ios::binary);
+        i8080 = new i8080Emulator{ "../Roms/invaders.rom" };
 
-	if (!file)
-    {
-        std::cerr << "Couldn't open file" << '\n';
-        exit(1);
-    }
+    //i8080->PrintDisassembledRom();
+    i8080->CycleCpu();
+    i8080->CycleCpu();
+    i8080->CycleCpu();
+    i8080->CycleCpu();
 
-    //Get the file size and read it into a memory buffer    
-    file.seekg(0, std::ios::end);
-	const int64_t fsize = file.tellg();
-    file.seekg(0, std::ios::beg);
-
-	auto* buffer = new uint8_t [fsize];
-
-    file.read(reinterpret_cast<char*>(buffer), fsize);
-
-    file.close();
-
-    int pc = 0;
-
-    while (pc < fsize)
-    {
-        pc += i8080Emulator::printDisassembledRom(buffer, pc);
-    }
-
-    delete[] buffer;
     return 0;
 }
