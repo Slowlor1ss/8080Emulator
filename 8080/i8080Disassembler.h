@@ -1,32 +1,7 @@
 #pragma once
 #include <iostream>
 
-//https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c183-dont-use-a-union-for-type-punning
-//https://stackoverflow.com/questions/53020776/how-appropriate-is-it-to-use-a-union-to-simulate-cpu-registers-in-an-emulator
-template <typename T, std::size_t Offset>
-class byte_ref {
-	static_assert(Offset%sizeof(T)==0);
-	T* m_Value;
-
-public:
-	byte_ref(T& value) : m_Value(&value) {
-	}
-
-	operator std::uint8_t() {
-		return (*m_Value >> Offset) & 0xFF;
-	}
-
-	byte_ref& operator=(const std::uint8_t rhs) {
-		*m_Value = (*m_Value & ~(0xFF << Offset)) | (rhs << Offset);
-		return *this;
-	}
-
-	bool CheckBit(const unsigned int n)
-	{
-		return (*m_Value >> n) & 1U;
-	}
-};
-
+//holds the state of the CPU
 struct State8080
 {
 	//primary accumulator
@@ -34,59 +9,38 @@ struct State8080
 	
 	//three 16-bit register pairs (BC, DE, and HL)
 	//that can function as six individual 8-bit registers
+	//the reversed order of the two registers in each register pair is intentional due to the little-endianness
+	//technically this is not very important as I'll only be reading one byte at a time
+	//but I wanted to keep the little-endianness as in the original 8080
+	uint8_t c;
+	uint8_t b;
 
-	std::uint16_t bc;
-	auto b() {
-		return byte_ref<std::uint16_t, 0>(bc);
-	}
-	auto c() {
-		return byte_ref<std::uint16_t, 8>(bc);
-	}
+	uint8_t e;
+	uint8_t d;
 
-	std::uint16_t de;
-	auto d() {
-		return byte_ref<std::uint16_t, 0>(de);
-	}
-	auto e() {
-		return byte_ref<std::uint16_t, 8>(de);
-	}
+	uint8_t l; //holds the least significant 8 bits
+	uint8_t h; //holds most significant 8 bits
+	//
 
-	std::uint16_t hl;
-	auto h() {
-		return byte_ref<std::uint16_t, 0>(hl);
-	}
-	auto l() {
-		return byte_ref<std::uint16_t, 8>(hl);
-	}
-
+	//stack pointer
 	uint16_t sp;
+	//program counter
 	uint16_t pc;
 
 	//file://Resources/8080-Programmers-Manual.pdf ConditionBits p.11 in pdf or p.5 in the book
-	std::uint8_t psw; //program status word
-	//struct 
-	//{
-	//	auto s() { //sign bit
-	//		return byte_ref<std::uint8_t, 0>(psw);
-	//	}
-	//	auto z() { //zero bit
-	//		return byte_ref<std::uint8_t, 1>(psw);
-	//	}
-	//	//nothing at bit 2
-	//	auto ac() { //auxiliary carry bit
-	//		return byte_ref<std::uint8_t, 3>(psw);
-	//	}
-	//	//nothing at bit 4
-	//	auto p() { //parity bit
-	//		return byte_ref<std::uint8_t, 5>(psw);
-	//	}
-	//	//nothing at bit 6
-	//	auto c() { //carry bit
-	//		return byte_ref<std::uint8_t, 7>(psw);
-	//	}
-	//}ConditionBits;
+	struct ConditionBits
+	{
+		uint8_t c : 1;  //carry, set if the last addition operation resulted in a carry 
+							// or last sub required borrow
+		uint8_t : 1;
+		uint8_t p : 1;  //parity bit, set if the number of true bits in the result is even
+		uint8_t : 1;
+		uint8_t ac : 1; //auxiliary carry bit for binary coded decimal arithmetic 
+		uint8_t : 1;
+		uint8_t z : 1;  //zero bit, set if the result is zero 
+		uint8_t s : 1;  //sign bit, set if the result is negative
+	};
 };
-
 
 class i8080Emulator
 {
@@ -143,7 +97,6 @@ private:
 	void PUSH(uint16_t);
 	void LXI(char);
 	void INX(char);
-	template <std::size_t Offset>
 	void INR(byte_ref<uint16_t, Offset> reg);
 #pragma endregion GenericOpcodeFunctions
 
