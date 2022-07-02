@@ -11,10 +11,8 @@ int main(int argc, char** argv)
         i8080 = new i8080Emulator{ "../Roms/invaders.rom" };
 
     //i8080->PrintDisassembledRom();
-    i8080->CycleCpu();
-    i8080->CycleCpu();
-    i8080->CycleCpu();
-    i8080->CycleCpu();
+	do{}
+	while (i8080->CycleCpu());
 
     return 0;
 }
