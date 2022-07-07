@@ -1,6 +1,5 @@
-#include <fstream>
-#include <iostream>
 #include "i8080Disassembler.h"
+#include <fstream>
 
 int main(int argc, char** argv)
 {
@@ -11,8 +10,12 @@ int main(int argc, char** argv)
         i8080 = new i8080Emulator{ "../Roms/invaders.rom" };
 
     //i8080->PrintDisassembledRom();
-	do{}
-	while (i8080->CycleCpu());
+	bool failed{};
+	do
+	{
+		failed = !i8080->CycleCpu();
+	}
+	while (!failed);
 
     return 0;
 }
