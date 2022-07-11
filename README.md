@@ -1,8 +1,13 @@
 # 8080 Emulator
 
-A 8080 microprocessor emulator that can run classic space invaders and some COM programs, I mainly chose this emulator to learn more about emulator development and low-level programming, all 255 opcodes have been implemented and tested, also some dedicated shift hardware has been emulated as space invaders use this for moving pixels on the screen and thus adds a hardware shift register to help with the math.
-Also as the 8080 is a microprocessor and not a complete machine like a Gameboy, it does not have a standard input, only some ports that can receive and send signals.
-So for sending keyboard signals and playing audio I used SDL as these are not really part of emulating an 8080 but emulating a sound card used in old arcade machines might be a fun project for the future.
+A 8080 microprocessor emulator that can run classic space invaders and some COM programs, I mainly chose this emulator to learn more about emulator development and low-level programming.
+<br>
+<br>
+All 255 opcodes have been implemented and tested, also some dedicated shift hardware has been emulated as space invaders use this for moving pixels on the screen and thus adds a hardware shift register to help with the math.
+<br>
+<br>
+As the 8080 is a microprocessor and not a complete machine like a Gameboy, it does not have a standard input or sound, only some ports that can receive and send signals.
+So for sending keyboard signals and playing audio I used SDL as these are not really part of emulating an 8080, emulating a sound card used in old arcade machines might be a fun project for the future.
 
  
 <br>
