@@ -1,10 +1,23 @@
 # 8080 Emulator
- A 8080 emulator that will run space invaders, I mainly choose this emulater to get in to emulator development, and do some low level programming. It is currently still a work in progress as I sadly had to temporarly stop working on it due to exams.
+
+A 8080 microprocessor emulator that can run classic space invaders and some COM programs, I mainly chose this emulator to learn more about emulator development and low-level programming, all 255 opcodes have been implemented and tested, also some dedicated shift hardware has been emulated as space invaders use this for moving pixels on the screen and thus adds a hardware shift register to help with the math.
+Also as the 8080 is a microprocessor and not a complete machine like a Gameboy, it does not have a standard input, only some ports that can receive and send signals.
+So for sending keyboard signals and playing audio I used SDL as these are not really part of emulating an 8080 but emulating a sound card used in old arcade machines might be a fun project for the future.
+
  
 <br>
 
-## What is the 8080 processor?
+## How to install:
+will be added soon
 
-The Intel 8080 is an 8-bit microprocessor it was released in 1984 and is the It's successor to the Intel 8008 it has a clock speed of 2 - 4 Mhz with the ability to address up to 64 KB of RAM. I am using this CPU as my first emulator to emulate space invaders, due to it's simplicity and thorough documentation and is thus perfect to get in to emulating bigger and harder things.
+## Controlls (Space invaders):
 
 
+## Sources:
+
+http://www.emulator101.com/reference/8080-by-opcode.html
+https://computerarcheology.com/Arcade/SpaceInvaders/Code.html
+https://computerarcheology.com/Arcade/SpaceInvaders/
+https://computerarcheology.com/Arcade/SpaceInvaders/Hardware.html
+8080-Programmers-Manual (see resources folder)
+https://en.wikipedia.org/wiki/Intel_8080
