@@ -13,7 +13,7 @@ So for sending keyboard signals and playing audio I used SDL as these are not re
 <br>
 
 ## How to install:
-will be added soon
+will be added soon togeter with some nice ui and refinements
 
 ## Controlls (Space invaders):
 
