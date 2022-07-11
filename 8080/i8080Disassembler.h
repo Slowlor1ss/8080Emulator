@@ -1,82 +1,6 @@
 #pragma once
 #include <iostream>
-
-//TODO: maybe turn this in to a cpu class
-//holds the state of the CPU
-struct State8080
-{
-	//Dedicated Shift Hardware //Source: https://computerarcheology.com/Arcade/SpaceInvaders/Hardware.html#dedicated-shift-hardware
-	//The 8080 instruction set does not include opcodes for shifting.
-	//An 8-bit pixel image must be shifted into a 16-bit word for the desired bit-position on the screen.
-	//Space Invaders adds a hardware shift register to help with the math.
-	uint16_t regShift;
-	uint8_t shiftOffset; //(3 bits)
-
-	//I/O
-	uint8_t inPort[4];
-	uint8_t outPort[7];
-
-	// Status
-	uint8_t interruptsEnabled;
-
-	//primary accumulator
-	uint8_t a;
-	
-	//three 16-bit register pairs (BC, DE, and HL)
-	//that can function as six individual 8-bit registers
-	//the reversed order of the two registers in each register pair is intentional due to the little-endianness
-	//technically this is not very important as I'll only be accessing one byte at a time
-	uint8_t c;
-	uint8_t b;
-
-	uint8_t e;
-	uint8_t d;
-
-	uint8_t l; //holds the least significant 8 bits
-	uint8_t h; //holds most significant 8 bits
-	//
-
-	//stack pointer
-	uint16_t sp;
-	//program counter
-	uint16_t pc;
-
-	//file://Resources/8080-Programmers-Manual.pdf ConditionBits p.11 in pdf or p.5 in the book
-	struct
-	{
-		bool c : 1;  //carry, set if the last addition operation resulted in a carry 
-							// or last sub required borrow
-		bool : 1;
-		bool p : 1;  //parity bit, set if the number of true bits in the result is even
-		bool : 1;
-		bool ac : 1; //auxiliary carry bit for binary coded decimal arithmetic 
-		bool : 1;
-		bool z : 1;  //zero bit, set if the result is zero 
-		bool s : 1;  //sign bit, set if the result is negative
-	} ConditionBits;
-};
-
-//based 8080-Programmers-Manual page 25
-enum class RegisterPairs8080
-{
-	BC = 0b00,
-	DE = 0b01,
-	HL = 0b10,
-	SP = 0b11 //technically not part of the three register pairs but is used as one in operations like LXI SP
-};
-
-//based 8080-Programmers-Manual page 16-17
-enum class Registers8080
-{
-	B = 0b000,
-	C = 0b001,
-	D = 0b010,
-	E = 0b011,
-	H = 0b100,
-	L = 0b101,
-	MEM = 0b110, //memory reference M, the addressed location is specified by the HL reg
-	A = 0b111,
-};
+#include "CPU.h"
 
 class i8080Emulator
 {
@@ -89,6 +13,9 @@ class i8080Emulator
 	};
 
 public:
+	//temp
+	friend int main(int argc, char** argv);
+
 	i8080Emulator(const char* path);
 	~i8080Emulator();
 
@@ -97,44 +24,29 @@ public:
 	i8080Emulator& operator=(const i8080Emulator& other) = delete;
 	i8080Emulator& operator=(i8080Emulator&& other) noexcept = delete;
 
-	bool CycleCpu();
+	void CycleCpu();
+	void Interrupt(uint8_t ID);
+
+	void MemWrite(uint16_t address, uint8_t data);
+	uint8_t ReadMem(uint16_t address);
 
 	//Debug
-	void PrintRegister() const;
 	void PrintDisassembledRom() const;
 
 private:
 
-	State8080* m_Cpu;
+	CPU* m_Cpu;
 	uint8_t* m_Memory;
 	int64_t m_CurrRomSize;
 
 	uint8_t m_CurrentOpcode;
 
 	//http://www.computerarcheology.com/Arcade/SpaceInvaders/RAMUse.html
-	static constexpr int MEMORY_SIZE = 0x10000;//0x4000;
+	static constexpr int MEMORY_SIZE = 0x10000;
 	static constexpr int ROM_SIZE = 0x2000;
 	static constexpr int STACK_START = 0x2400;
 	static constexpr int PROGRAM_START = 0x0000;
 
-	void UpdateFlags(const uint8_t& value) const;
-
-	void MemWrite(uint16_t address, uint8_t data);
-
-	uint8_t ReadFlags() const;
-	void SetFlags(uint8_t);
-
-	uint16_t ReadRegisterPair(RegisterPairs8080 pair) const;
-	void SetRegisterPair(RegisterPairs8080 pair, uint16_t value);
-	void SetRegisterPair(RegisterPairs8080 pair, uint8_t LSByte, uint8_t MSByte);
-
-	uint8_t ReadRegister(Registers8080 reg) const;
-	void SetRegister(Registers8080 pair, uint8_t value);
-
-	//uint8_t* DecodeOpcodeRegister(uint8_t opcode3bit);
-
-	RegisterPairs8080 GetRegisterPairFromOpcode(uint8_t opcode) const;
-	Registers8080 GetRegisterFromOpcode(uint8_t opcode, uint8_t shift = 0) const;
 
 #pragma region OpcodeFunctions
 
@@ -246,7 +158,7 @@ private:
 	void CNZ();
 	//void PUSHB();
 	void ADI();
-	void RST0();
+	void RST();
 	void RZ();
 	void RET();
 	void JZ();
@@ -317,7 +229,7 @@ private:
 	{ &i8080Emulator::INR,"INR B", 1 },
 	{ &i8080Emulator::DCR,"DCR B", 1 },
 	{ &i8080Emulator::MVI,"MVI B", 2 },
-	{ &i8080Emulator::defaultOpcode,"RLC", 1 },
+	{ &i8080Emulator::RLC,"RLC", 1 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::DAD,"DAD B", 1 },
 	{ &i8080Emulator::LDAXB,"LDAX B", 1 },
@@ -341,23 +253,23 @@ private:
 	{ &i8080Emulator::INR,"INR E", 1 },
 	{ &i8080Emulator::DCR,"DCR E", 1 },
 	{ &i8080Emulator::MVI,"MVI E", 2 },
-	{ &i8080Emulator::defaultOpcode,"RAR", 1 },
-	{ &i8080Emulator::defaultOpcode,"RIM", 1 },
+	{ &i8080Emulator::RAR,"RAR", 1 },
+	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::LXI,"LXI H", 3 },
-	{ &i8080Emulator::defaultOpcode,"SHLD", 3 },
+	{ &i8080Emulator::SHLD,"SHLD", 3 },
 	{ &i8080Emulator::INX,"INX H", 1 },
 	{ &i8080Emulator::INR,"INR H", 1 },
 	{ &i8080Emulator::DCR,"DCR H", 1 },
 	{ &i8080Emulator::MVI,"MVI H", 2 },
-	{ &i8080Emulator::defaultOpcode,"DAA", 1 },
+	{ &i8080Emulator::DAA,"DAA", 1 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::DAD,"DAD H", 1 },
-	{ &i8080Emulator::defaultOpcode,"LHLD", 3 },
+	{ &i8080Emulator::LHLD,"LHLD", 3 },
 	{ &i8080Emulator::DCX,"DCX H", 1 },
 	{ &i8080Emulator::INR,"INR L", 1 },
 	{ &i8080Emulator::DCR,"DCR L", 1 },
 	{ &i8080Emulator::MVI,"MVI L", 2 },
-	{ &i8080Emulator::defaultOpcode,"CMA", 1 },
+	{ &i8080Emulator::CMA,"CMA", 1 },
 	{ &i8080Emulator::defaultOpcode,"SIM", 1 },
 	{ &i8080Emulator::LXI,"LXI SP", 3 },
 	{ &i8080Emulator::STA,"STA", 3 },
@@ -365,7 +277,7 @@ private:
 	{ &i8080Emulator::INR,"INR M", 1 },
 	{ &i8080Emulator::DCR,"DCR M", 1 },
 	{ &i8080Emulator::MVI,"MVI M", 2 },
-	{ &i8080Emulator::defaultOpcode,"STC", 1 },
+	{ &i8080Emulator::STC,"STC", 1 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::DAD,"DAD SP", 1 },
 	{ &i8080Emulator::LDA,"LDA", 3 },
@@ -428,7 +340,7 @@ private:
 	{ &i8080Emulator::MOV, "MOV M,E", 1 },
 	{ &i8080Emulator::MOV, "MOV M,H", 1 },
 	{ &i8080Emulator::MOV, "MOV M,L", 1 },
-	{ &i8080Emulator::defaultOpcode,"HLT", 1 },
+	{ &i8080Emulator::HLT,"HLT", 1 },
 	{ &i8080Emulator::MOV,"MOV M,A", 1 },
 	{ &i8080Emulator::MOV,"MOV A,B", 1 },
 	{ &i8080Emulator::MOV,"MOV A,C", 1 },
@@ -438,30 +350,30 @@ private:
 	{ &i8080Emulator::MOV,"MOV A,L", 1 },
 	{ &i8080Emulator::MOV,"MOV A,M", 1 },
 	{ &i8080Emulator::MOV,"MOV A,A", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADD B", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADD C", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADD D", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADD E", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADD H", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADD L", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADD M", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADD A", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADC B", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADC C", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADC D", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADC E", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADC H", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADC L", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADC M", 1 },
-	{ &i8080Emulator::defaultOpcode,"ADC A", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUB B", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUB C", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUB D", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUB E", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUB H", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUB L", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUB M", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUB A", 1 },
+	{ &i8080Emulator::ADD,"ADD B", 1 },
+	{ &i8080Emulator::ADD,"ADD C", 1 },
+	{ &i8080Emulator::ADD,"ADD D", 1 },
+	{ &i8080Emulator::ADD,"ADD E", 1 },
+	{ &i8080Emulator::ADD,"ADD H", 1 },
+	{ &i8080Emulator::ADD,"ADD L", 1 },
+	{ &i8080Emulator::ADD,"ADD M", 1 },
+	{ &i8080Emulator::ADD,"ADD A", 1 },
+	{ &i8080Emulator::ADC,"ADC B", 1 },
+	{ &i8080Emulator::ADC,"ADC C", 1 },
+	{ &i8080Emulator::ADC,"ADC D", 1 },
+	{ &i8080Emulator::ADC,"ADC E", 1 },
+	{ &i8080Emulator::ADC,"ADC H", 1 },
+	{ &i8080Emulator::ADC,"ADC L", 1 },
+	{ &i8080Emulator::ADC,"ADC M", 1 },
+	{ &i8080Emulator::ADC,"ADC A", 1 },
+	{ &i8080Emulator::SUB,"SUB B", 1 },
+	{ &i8080Emulator::SUB,"SUB C", 1 },
+	{ &i8080Emulator::SUB,"SUB D", 1 },
+	{ &i8080Emulator::SUB,"SUB E", 1 },
+	{ &i8080Emulator::SUB,"SUB H", 1 },
+	{ &i8080Emulator::SUB,"SUB L", 1 },
+	{ &i8080Emulator::SUB,"SUB M", 1 },
+	{ &i8080Emulator::SUB,"SUB A", 1 },
 	{ &i8080Emulator::SBB,"SBB B", 1 },
 	{ &i8080Emulator::SBB,"SBB C", 1 },
 	{ &i8080Emulator::SBB,"SBB D", 1 },
@@ -506,66 +418,87 @@ private:
 	{ &i8080Emulator::POP,"POP B", 1 },
 	{ &i8080Emulator::JNZ,"JNZ", 3 },
 	{ &i8080Emulator::JMP,"JMP", 3 },
-	{ &i8080Emulator::defaultOpcode,"CNZ", 3 },
+	{ &i8080Emulator::CNZ,"CNZ", 3 },
 	{ &i8080Emulator::PUSH,"PUSH B", 1 },
 	{ &i8080Emulator::ADI,"ADI", 2 },
-	{ &i8080Emulator::defaultOpcode,"RST 0", 1 },
-	{ &i8080Emulator::defaultOpcode,"RZ", 1 },
+	{ &i8080Emulator::RST,"RST 0", 1 },
+	{ &i8080Emulator::RZ,"RZ", 1 },
 	{ &i8080Emulator::RET,"RET", 1 },
 	{ &i8080Emulator::JZ,"JZ", 3 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
-	{ &i8080Emulator::defaultOpcode,"CZ", 3 },
+	{ &i8080Emulator::CZ,"CZ", 3 },
 	{ &i8080Emulator::CALL,"CALL", 3 },
 	{ &i8080Emulator::defaultOpcode,"ACI", 2 },
-	{ &i8080Emulator::defaultOpcode,"RST1", 1 },
-	{ &i8080Emulator::defaultOpcode,"RNC", 1 },
+	{ &i8080Emulator::RST,"RST1", 1 },
+	{ &i8080Emulator::RNC,"RNC", 1 },
 	{ &i8080Emulator::POP,"POP D", 1 },
-	{ &i8080Emulator::defaultOpcode,"JNC", 3 },
+	{ &i8080Emulator::JNC,"JNC", 3 },
 	{ &i8080Emulator::OUT,"OUT", 2 },
-	{ &i8080Emulator::defaultOpcode,"CNC", 3 },
+	{ &i8080Emulator::CNC,"CNC", 3 },
 	{ &i8080Emulator::PUSH,"PUSH D", 1 },
-	{ &i8080Emulator::defaultOpcode,"SUI", 2 },
-	{ &i8080Emulator::defaultOpcode,"RST 2", 1 },
-	{ &i8080Emulator::defaultOpcode,"RC", 1 },
+	{ &i8080Emulator::SUI,"SUI", 2 },
+	{ &i8080Emulator::RST,"RST 2", 1 },
+	{ &i8080Emulator::RC,"RC", 1 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
-	{ &i8080Emulator::defaultOpcode,"JC", 3 },
+	{ &i8080Emulator::JC,"JC", 3 },
 	{ &i8080Emulator::IN,"IN D8", 2 },
-	{ &i8080Emulator::defaultOpcode,"CC", 3 },
+	{ &i8080Emulator::CC,"CC", 3 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
-	{ &i8080Emulator::defaultOpcode,"SBI", 2 },
-	{ &i8080Emulator::defaultOpcode,"RST 3", 1 },
-	{ &i8080Emulator::defaultOpcode,"RPO", 1 },
+	{ &i8080Emulator::SBI,"SBI", 2 },
+	{ &i8080Emulator::RST,"RST 3", 1 },
+	{ &i8080Emulator::RPO,"RPO", 1 },
 	{ &i8080Emulator::POP,"POP H", 1 },
-	{ &i8080Emulator::defaultOpcode,"JPO", 3 },
-	{ &i8080Emulator::defaultOpcode,"XTHL", 1 },
-	{ &i8080Emulator::defaultOpcode,"CPO", 3 },
+	{ &i8080Emulator::JPO,"JPO", 3 },
+	{ &i8080Emulator::XTHL,"XTHL", 1 },
+	{ &i8080Emulator::CPO,"CPO", 3 },
 	{ &i8080Emulator::PUSH,"PUSH H", 1 },
 	{ &i8080Emulator::ANI,"ANI", 2 },
-	{ &i8080Emulator::defaultOpcode,"RST 4", 1 },
-	{ &i8080Emulator::defaultOpcode,"RPE", 1 },
-	{ &i8080Emulator::defaultOpcode,"PCHL", 1 },
-	{ &i8080Emulator::defaultOpcode,"JPE", 3 },
+	{ &i8080Emulator::RST,"RST 4", 1 },
+	{ &i8080Emulator::RPE,"RPE", 1 },
+	{ &i8080Emulator::PCHL,"PCHL", 1 },
+	{ &i8080Emulator::JPE,"JPE", 3 },
 	{ &i8080Emulator::XCHG,"XCHG", 1 },
-	{ &i8080Emulator::defaultOpcode,"CPE", 3 },
+	{ &i8080Emulator::CPE,"CPE", 3 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::defaultOpcode,"XRI", 2 },
-	{ &i8080Emulator::defaultOpcode,"RST 5", 1 },
-	{ &i8080Emulator::defaultOpcode,"RP", 1 },
+	{ &i8080Emulator::RST,"RST 5", 1 },
+	{ &i8080Emulator::RP,"RP", 1 },
 	{ &i8080Emulator::POP,"POP PSW", 1 },
-	{ &i8080Emulator::defaultOpcode,"JP", 3 },
+	{ &i8080Emulator::JP,"JP", 3 },
 	{ &i8080Emulator::DI,"DI", 1 },
-	{ &i8080Emulator::defaultOpcode,"CP", 3 },
+	{ &i8080Emulator::CP,"CP", 3 },
 	{ &i8080Emulator::PUSH,"PUSH PSW", 1 },
-	{ &i8080Emulator::defaultOpcode,"ORI", 2 },
-	{ &i8080Emulator::defaultOpcode,"RST 6", 1 },
-	{ &i8080Emulator::defaultOpcode,"RM", 1 },
+	{ &i8080Emulator::ORI,"ORI", 2 },
+	{ &i8080Emulator::RST,"RST 6", 1 },
+	{ &i8080Emulator::RM,"RM", 1 },
 	{ &i8080Emulator::defaultOpcode,"SPHL", 1 },
-	{ &i8080Emulator::defaultOpcode,"JM", 3 },
+	{ &i8080Emulator::JM,"JM", 3 },
 	{ &i8080Emulator::EI,"EI", 1 },
-	{ &i8080Emulator::defaultOpcode,"CM", 3 },
+	{ &i8080Emulator::CM,"CM", 3 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::CPI,"CPI", 2 },
-	{ &i8080Emulator::defaultOpcode,"RST 7", 1 }
+	{ &i8080Emulator::RST,"RST 7", 1 }
+	};
+
+	//from https://github.com/superzazu/8080
+	inline static constexpr uint8_t InstructionCycles[]{
+		//  0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+			4,  10, 7,  5,  5,  5,  7,  4,  4,  10, 7,  5,  5,  5,  7,  4,  // 0
+			4,  10, 7,  5,  5,  5,  7,  4,  4,  10, 7,  5,  5,  5,  7,  4,  // 1
+			4,  10, 16, 5,  5,  5,  7,  4,  4,  10, 16, 5,  5,  5,  7,  4,  // 2
+			4,  10, 13, 5,  10, 10, 10, 4,  4,  10, 13, 5,  5,  5,  7,  4,  // 3
+			5,  5,  5,  5,  5,  5,  7,  5,  5,  5,  5,  5,  5,  5,  7,  5,  // 4
+			5,  5,  5,  5,  5,  5,  7,  5,  5,  5,  5,  5,  5,  5,  7,  5,  // 5
+			5,  5,  5,  5,  5,  5,  7,  5,  5,  5,  5,  5,  5,  5,  7,  5,  // 6
+			7,  7,  7,  7,  7,  7,  7,  7,  5,  5,  5,  5,  5,  5,  7,  5,  // 7
+			4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  // 8
+			4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  // 9
+			4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  // A
+			4,  4,  4,  4,  4,  4,  7,  4,  4,  4,  4,  4,  4,  4,  7,  4,  // B
+			5,  10, 10, 10, 11, 11, 7,  11, 5,  10, 10, 10, 11, 11, 7,  11, // C
+			5,  10, 10, 10, 11, 11, 7,  11, 5,  10, 10, 10, 11, 11, 7,  11, // D
+			5,  10, 10, 18, 11, 11, 7,  11, 5,  5,  10, 5,  11, 11, 7,  11, // E
+			5,  10, 10, 4,  11, 11, 7,  11, 5,  5,  10, 4,  11, 11, 7,  11  // F
 	};
 };
 
