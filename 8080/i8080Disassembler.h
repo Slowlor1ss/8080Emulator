@@ -13,7 +13,7 @@ class i8080Emulator
 	};
 
 public:
-	//temp
+	//temp //TODO: remove
 	friend int main(int argc, char** argv);
 
 	i8080Emulator(const char* path);
@@ -53,7 +53,7 @@ private:
 #pragma region GenericOpcodeFunctions
 	//Generic functions
 	void RETURN(bool);
-	void RESET(uint16_t);
+	void RESTART(uint16_t);
 	void CALLif(bool);
 	void JUMP(bool);
 	void POP();
@@ -68,153 +68,76 @@ private:
 #pragma endregion GenericOpcodeFunctions
 
 	void NOP();
-	//void LXIB();
 	void STAXB();
-	//void INXB();
-	//void INRB();
-	//void DCRB();
-	//void MVIB();
 	void RLC();
-	/*NOP*/
-	//void DADB();
 	void LDAXB();
-	//void DCXB();
-	//void INRC();
-	//void DCRC();
-	//void MVIC();
 	void RRC();
-	/*NOP*/
-	//void LXID();
 	void STAXD();
-	//void INXD();
-	//void INRD();
-	//void DCRD();
-	//void MVID();
 	void RAL();
-	/*NOP*/
-	//void DADD();
 	void LDAXD();
-	//void DCXD();
-	//void INRE();
-	//void DCRE();
-	//void MVIE();
 	void RAR();
-	/*NOP*/
-	//void LXIH();
 	void SHLD();
-	//void INXH();
-	//void INRH();
-	//void DCRH();
-	//void MVIH();
 	void DAA();
-	/*NOP*/
-	//void DADH();
 	void LHLD();
-	//void DCXH();
-	//void INRL();
-	//void DCRL();
-	//void MVIL();
 	void CMA();
-	/*NOP*/
-	//void LXISP();
 	void STA();
-	//void INXSP();
-	//void INRM();
-	//void DCRM();
-	//void MVIM();
 	void STC();
-	/*NOP*/
-	//void DADSP();
 	void LDA();
-	//void DCXSP();
-	//void INRA();
-	//void DCRA();
-	//void MVIA();
 	void CMC();
-	// (0x40 - 75, 0x77 - 0x7F)
 	void MOV();
-	// 0x76
 	void HLT();
-	// (0x80 - 0x87)
 	void ADD();
-	// (0x88 - 0x8f)
 	void ADC();
-	// (0x90 - 0x97)
 	void SUB();
-	// (0x98 - 0x9f)
 	void SBB();
-	// (0xA0 - 0xA7)
 	void ANA();
-	// (0xA8 - 0xAF)
 	void XRA();
-	// (0xB0 - 0xB7)
 	void ORA();
-	// (0xB8 - 0xBF)
 	void CMP();
 	void RNZ();
-	//void POPB();
 	void JNZ();
 	void JMP();
 	void CNZ();
-	//void PUSHB();
 	void ADI();
 	void RST();
 	void RZ();
 	void RET();
 	void JZ();
-	/*NOP*/
 	void CZ();
 	void CALL();
 	void ACI();
-	void RST1();
 	void RNC();
-	//void POPD();
 	void JNC();
 	void OUT();
 	void CNC();
-	//void PUSHD();
 	void SUI();
-	void RST2();
 	void RC();
-	/*NOP*/
 	void JC();
 	void IN();
 	void CC();
-	/*NOP*/
 	void SBI();
-	void RST3();
 	void RPO();
-	//void POPH();
 	void JPO();
 	void XTHL();
 	void CPO();
-	//void PUSHH();
 	void ANI();
-	void RST4();
 	void RPE();
 	void PCHL();
 	void JPE();
 	void XCHG();
 	void CPE();
-	/*NOP*/
 	void XRI();
-	void RST5();
 	void RP();
-	//void POPPSW();
 	void JP();
 	void DI();
 	void CP();
-	//void PUSHPSW();
 	void ORI();
-	void RST6();
 	void RM();
 	void SPHL();
 	void JM();
 	void EI();
 	void CM();
-	/*NOP*/
 	void CPI();
-	void RST7();
 
 #pragma endregion OpcodeFunctions
 
@@ -245,7 +168,7 @@ private:
 	{ &i8080Emulator::INR,"INR D", 1 },
 	{ &i8080Emulator::DCR,"DCR D", 1 },
 	{ &i8080Emulator::MVI,"MVI D", 2 },
-	{ &i8080Emulator::defaultOpcode,"RAL", 1 },
+	{ &i8080Emulator::RAL,"RAL", 1 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::DAD,"DAD D", 1 },
 	{ &i8080Emulator::LDAXD,"LDAX D", 1 },
@@ -270,7 +193,7 @@ private:
 	{ &i8080Emulator::DCR,"DCR L", 1 },
 	{ &i8080Emulator::MVI,"MVI L", 2 },
 	{ &i8080Emulator::CMA,"CMA", 1 },
-	{ &i8080Emulator::defaultOpcode,"SIM", 1 },
+	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::LXI,"LXI SP", 3 },
 	{ &i8080Emulator::STA,"STA", 3 },
 	{ &i8080Emulator::INX,"INX SP", 1 },
@@ -285,7 +208,7 @@ private:
 	{ &i8080Emulator::INR,"INR A", 1 },
 	{ &i8080Emulator::DCR,"DCR A", 1 },
 	{ &i8080Emulator::MVI,"MVI A", 2 },
-	{ &i8080Emulator::defaultOpcode,"CMC", 1 },
+	{ &i8080Emulator::CMC,"CMC", 1 },
 	{ &i8080Emulator::MOV, "MOV B,B", 1 },
 	{ &i8080Emulator::MOV, "MOV B,C", 1 },
 	{ &i8080Emulator::MOV, "MOV B,D", 1 },
@@ -428,7 +351,7 @@ private:
 	{ &i8080Emulator::defaultOpcode,"", 1 },
 	{ &i8080Emulator::CZ,"CZ", 3 },
 	{ &i8080Emulator::CALL,"CALL", 3 },
-	{ &i8080Emulator::defaultOpcode,"ACI", 2 },
+	{ &i8080Emulator::ACI,"ACI", 2 },
 	{ &i8080Emulator::RST,"RST1", 1 },
 	{ &i8080Emulator::RNC,"RNC", 1 },
 	{ &i8080Emulator::POP,"POP D", 1 },
@@ -460,7 +383,7 @@ private:
 	{ &i8080Emulator::XCHG,"XCHG", 1 },
 	{ &i8080Emulator::CPE,"CPE", 3 },
 	{ &i8080Emulator::defaultOpcode,"", 1 },
-	{ &i8080Emulator::defaultOpcode,"XRI", 2 },
+	{ &i8080Emulator::XRI,"XRI", 2 },
 	{ &i8080Emulator::RST,"RST 5", 1 },
 	{ &i8080Emulator::RP,"RP", 1 },
 	{ &i8080Emulator::POP,"POP PSW", 1 },
@@ -471,7 +394,7 @@ private:
 	{ &i8080Emulator::ORI,"ORI", 2 },
 	{ &i8080Emulator::RST,"RST 6", 1 },
 	{ &i8080Emulator::RM,"RM", 1 },
-	{ &i8080Emulator::defaultOpcode,"SPHL", 1 },
+	{ &i8080Emulator::SPHL,"SPHL", 1 },
 	{ &i8080Emulator::JM,"JM", 3 },
 	{ &i8080Emulator::EI,"EI", 1 },
 	{ &i8080Emulator::CM,"CM", 3 },

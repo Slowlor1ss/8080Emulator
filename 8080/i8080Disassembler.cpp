@@ -132,7 +132,7 @@ void i8080Emulator::MemWrite(uint16_t address, uint8_t data)
 	}
 	if (address < ROM_SIZE) {
 		std::cout << "Illegal address write:" << address << '\n';
-		//__debugbreak();
+		__debugbreak();
 	}
 	else {
 		m_Memory[address] = data;
@@ -161,9 +161,7 @@ void i8080Emulator::defaultOpcode()
 void i8080Emulator::RETURN(bool condition)
 {
 	if (condition) {
-		//std::cout << "OP: " << std::hex << m_Cpu->pc << " | ";
 		m_Cpu->pc = uint16_t(m_Memory[m_Cpu->sp + 1] << 8) | m_Memory[m_Cpu->sp];
-		//std::cout << "return to: " << std::hex << m_Cpu->pc << '\n';
 		m_Cpu->sp += 2;
 	}
 	else {
@@ -171,8 +169,10 @@ void i8080Emulator::RETURN(bool condition)
 	}
 }
 
-//behaves like call (saves pc to stack), but jumps to a specified number
-void i8080Emulator::RESET(uint16_t callAddress)
+//the contents of the program counter
+//are pushed onto the stack, providing a return address for
+//later use by a RETURN instruction
+void i8080Emulator::RESTART(uint16_t callAddress)
 {
 	MemWrite((m_Cpu->sp - 1), ((m_Cpu->pc + 1) >> 8));
 	MemWrite((m_Cpu->sp - 2), uint8_t(m_Cpu->pc + 1));
@@ -184,10 +184,8 @@ void i8080Emulator::RESET(uint16_t callAddress)
 void i8080Emulator::CALLif(bool condition)
 {
 	if (condition) {
-		//std::cout << "want to write: " << std::hex << m_Cpu->pc + 3;
 		MemWrite((m_Cpu->sp - 1), ((m_Cpu->pc + 3) & 0xFF00) >> 8);
 		MemWrite((m_Cpu->sp - 2), ((m_Cpu->pc + 3) & 0x00FF));
-		//std::cout << " | wrote: : " << std::hex << (uint16_t(m_Memory[m_Cpu->sp - 1] << 8) | m_Memory[m_Cpu->sp - 2]) << '\n';
 		m_Cpu->sp -= 2;
 
 		m_Cpu->pc = uint16_t(m_Memory[m_Cpu->pc + 2] << 8) | m_Memory[m_Cpu->pc + 1];
@@ -256,21 +254,8 @@ void i8080Emulator::DCR()
 //sets a register to the byte after PC
 void i8080Emulator::MVI()
 {
-	if (m_Cpu->pc == 0x151F)
-	{
-		std::cout << "Killing alien" << '\n';
-	}
-	if (m_Cpu->pc == 0x0798)
-	{
-		std::cout << "Killing alien" << '\n';
-	}
-
 	const Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode, 3);
 	m_Cpu->SetRegister(reg, m_Memory[m_Cpu->pc + 1]);
-	if(m_Cpu->pc == 0x1512 && m_Cpu->a == 0x05)
-	{
-		std::cout << "Flag alien explosion" << '\n';
-	}
 	m_Cpu->pc += 2;
 }
 
@@ -295,10 +280,6 @@ void i8080Emulator::PUSH()
 //loads immediate into register pair
 void i8080Emulator::LXI()
 {
-	//SetRegisterPair(pair, 
-	//	(uint16_t(m_Memory[m_Cpu->pc + 2] << 8) | m_Memory[m_Cpu->pc + 1])
-	//);
-
 	const RegisterPairs8080 pair = m_Cpu->GetRegisterPairFromOpcode(m_CurrentOpcode);
 	m_Cpu->SetRegisterPair(pair,m_Memory[m_Cpu->pc + 1], m_Memory[m_Cpu->pc + 2]);
 
@@ -332,75 +313,58 @@ void i8080Emulator::NOP() {
 	m_Cpu->pc += OPCODES[0x00].sizeBytes;
 }
 
-//
-//// 0x02 | Write A to mem at address BC 
+//write A to mem at address BC 
 void i8080Emulator::STAXB() {
 	MemWrite(m_Cpu->ReadRegisterPair(RegisterPairs8080::BC), m_Cpu->a);
 	m_Cpu->pc += OPCODES[0x02].sizeBytes;
 }
 
-//// 0x07 | bit shift A left, bit 0 & Cy = prev bit 7
+//bit shift A left, bit 0 & Cy = prev bit 7
 void i8080Emulator::RLC() {
-	uint8_t oldBit7 = (m_Cpu->a & 0x80) >> 7;
+	uint8_t oldBit7 = (m_Cpu->a & 128) >> 7;
 	m_Cpu->a <<= 1;
 	m_Cpu->a = m_Cpu->a | oldBit7;
 	m_Cpu->ConditionBits.c = (1 == oldBit7);
 	m_Cpu->pc += 1;
 }
 
-//// 0x0A | set register A to the contents or memory pointed by BC
+//set register A to the contents or memory pointed by BC
 void i8080Emulator::LDAXB() {
 	m_Cpu->a = m_Memory[m_Cpu->ReadRegisterPair(RegisterPairs8080::BC)];
 	m_Cpu->pc += 1;
 }
 
-//// 0x0F | rotates A right 1, bit 7 & CY = prev bit 0
+//rotates A right 1, bit 7 & CY = prev bit 0
 void i8080Emulator::RRC() {
-	uint8_t oldBit0 = (m_Cpu->a & 0x01);
+	uint8_t oldBit0 = (m_Cpu->a & 1);
 	m_Cpu->a >>= 1;
 	m_Cpu->a = m_Cpu->a | (oldBit0 << 7);
-	m_Cpu->ConditionBits.c = (0x01 == oldBit0);
+	m_Cpu->ConditionBits.c = (1 == oldBit0);
 	m_Cpu->pc += OPCODES[0x0F].sizeBytes;
 }
-//
-//// 0x10 | not an 8080 instruction, use as NOP
-//
-//// 0x11 | writes the bytes after m_Cpu->pc into the D register pair, E=pc+1, D=pc+2
-//void i8080Emulator::LXID() {
-//	LXI(RegisterPairs8080::DE);
-//}
-//
-//// 0x12 | stores A into the address pointed to by the D reg pair
-//// XXX no opcode count for stax
+
+//stores A into the address pointed to by the D reg pair
 void i8080Emulator::STAXD() {
 	MemWrite(m_Cpu->ReadRegisterPair(RegisterPairs8080::DE), m_Cpu->a);
 	m_Cpu->pc += OPCODES[0x12].sizeBytes;
 }
 
-//// 0x1A | store the value at the memory referenced by DE in A
+//shifts A Left 1, bit 0 = prev CY, CY = prev bit 7
+void i8080Emulator::RAL() {
+	uint8_t oldA = m_Cpu->a;
+	m_Cpu->a <<= 1;
+	m_Cpu->a = m_Cpu->a | m_Cpu->ConditionBits.c;
+	m_Cpu->ConditionBits.c = (oldA >= 128);
+	m_Cpu->pc += OPCODES[0x17].sizeBytes;
+}
+
+//store the value at the memory referenced by DE in A
 void i8080Emulator::LDAXD() {
 	m_Cpu->a = m_Memory[m_Cpu->ReadRegisterPair(RegisterPairs8080::DE)];
 	m_Cpu->pc += OPCODES[0x1A].sizeBytes;
 }
-//
-//// 0x1B | decrease DE pair by 1
-//void i8080Emulator::DCXD() {
-//	DCX('D');
-//}
-//
 
-//
-//// 0x1D | decrease reg E by 1
-//void i8080Emulator::DCRE() {
-//	DCR(m_Cpu->e);
-//}
-////
-////// 0x1E | move byte after m_Cpu->pc into reg E
-//void i8080Emulator::MVIE() {
-//	MVI(m_Cpu->e);
-//}
-//
-//// 0x1F | rotate A right one, bit 7 = prev CY, CY = prevbit0
+//rotate A right one, bit 7 = prev CY, CY = prevbit0
 void i8080Emulator::RAR() {
 	uint8_t oldA = m_Cpu->a;
 	m_Cpu->a >>= 1;
@@ -408,16 +372,9 @@ void i8080Emulator::RAR() {
 	m_Cpu->ConditionBits.c = (0x01 == (oldA & 0x01));
 	m_Cpu->pc += 1;
 }
-//
-//// 0x20 | not an 8080 code, use as NOP
-//
-//// 0x21 | loads data after m_Cpu->pc into H pair
-//void i8080Emulator::LXIH() {
-//	LXI(RegisterPairs8080::HL);
-//}
-//
-//// 0x22 | stores HL into adress listed after m_Cpu->pc
-//// adr <- L , adr+1 <- H
+
+//stores HL into address listed after m_Cpu->pc
+//adr <- L , adr+1 <- H
 void i8080Emulator::SHLD() {
 	uint16_t address = (m_Memory[m_Cpu->pc + 2] << 8) | m_Memory[m_Cpu->pc + 1];
 	MemWrite(address, m_Cpu->l);
@@ -425,32 +382,25 @@ void i8080Emulator::SHLD() {
 	m_Cpu->pc += 3;
 }
 
+//The eight-bit hexadecimal number in the
+//accumulator is adjusted to form two four-bit binary coded decimals
 void i8080Emulator::DAA() {
 
-	if (m_Cpu->pc == 0x099C)
-	{
-		std::cout << "DAA\n";
-	}
-
 	if (((m_Cpu->a & 0x0F) > 0x09) || m_Cpu->ConditionBits.ac) {
-		//m_Cpu->ConditionBits.ac = true;
 		m_Cpu->a += 0x06;
 	}
-	//else {
-	//	m_Cpu->ConditionBits.ac = false;
-	//}
 
-	if (((m_Cpu->a & 0xF0) > 0x90) || m_Cpu->ConditionBits.c) { /*((m_Cpu->a >> 4) >= 9 && (m_Cpu->a & 0xF) > 9) || (m_Cpu->a >> 4) > 9*/
+	if (((m_Cpu->a & 0xF0) > 0x90) || m_Cpu->ConditionBits.c) {
 		m_Cpu->ConditionBits.c = true;
 		m_Cpu->a += 0x60;
 	}
-	//else {
-	//	m_Cpu->ConditionBits.c = false;
-	//}
+
 	m_Cpu->UpdateFlags(m_Cpu->a);
 	m_Cpu->pc += 1;
 }
 
+//read memory from 2bytes after m_Cpu->pc into HL
+// L <- adr, H <- adr+1
 void i8080Emulator::LHLD() {
 	uint16_t address = ((m_Memory[m_Cpu->pc + 2] << 8) | m_Memory[m_Cpu->pc + 1]);
 	m_Cpu->l = m_Memory[address];
@@ -458,8 +408,7 @@ void i8080Emulator::LHLD() {
 	m_Cpu->pc += 3;
 }
 
-
-//// 0x2F | invert A
+//invert A
 void i8080Emulator::CMA() {
 	m_Cpu->a = ~m_Cpu->a;
 	m_Cpu->pc += 1;
@@ -478,126 +427,44 @@ void i8080Emulator::STA() {
 	const uint16_t address = uint16_t(m_Memory[m_Cpu->pc + 2] << 8) | m_Memory[m_Cpu->pc + 1];
 	MemWrite(address, m_Cpu->a);
 
-	if (m_Cpu->pc == 0x0426 && m_Cpu->a != 0)
-	{
-		//__debugbreak();
-		//m_Cpu->printDebug = true;
-		std::cout << "Collision with alien" << "\n";
-	}
-
 	m_Cpu->pc += OPCODES[0x32].sizeBytes;
 }
 
-//// 0x37 | set carry flag to 1
+//set carry flag to 1
 void i8080Emulator::STC() {
 	m_Cpu->ConditionBits.c = true;
 	m_Cpu->pc += 1;
 }
 
-//// 0x3A | set reg A to the value pointed by bytes after m_Cpu->pc
+//set reg A to the value pointed by bytes after m_Cpu->pc
 void i8080Emulator::LDA() {
 	m_Cpu->a = m_Memory[((m_Memory[m_Cpu->pc + 2] << 8) | m_Memory[m_Cpu->pc + 1])];
-	if (m_Cpu->pc == 0x14EA && m_Cpu->a == 1)
-	{
-		std::cout << "Alien is blowing up" << "\n";
-	}
 	m_Cpu->pc += OPCODES[0x3A].sizeBytes;
 }
-//
-//// 0x3B | decrease SP by 1
-//void i8080Emulator::DCXSP() {
-//	DCX('S');
-//}
-//
-//// 0x3C | adds one to A and alters S, Z, AC, P flags
-//void i8080Emulator::INRA() {
-//	INR(A);
-//}
-//
-//// 0x3D | subtracts one from A and alters S, Z, AC, P flags
-//void i8080Emulator::DCRA() {
-//	DCR(m_Cpu->a);
-//}
-////
-////// 0x3E | moves next byte into A register
-//void i8080Emulator::MVIA() {
-//	MVI(m_Cpu->a);
-//}
-//
-//// 0x3F | invert carry flag
-//void i8080Emulator::CMC() {
-//	flags.CY = !flags.CY;
-//	m_Cpu->pc += 1;
-//	opcodeCycleCount = 5;
-//}
-//
 
-//TODO: clean up
-//based 8080-Programmers-Manual page 16-17 [MOV Instruction]
-// encoding	| 8bit reg| 
-// 000		| B		  | 
-// 001		| C		  | 
-// 010		| D		  | 
-// 011		| E		  | 
-// 100		| H		  | 
-// 101		| L		  | 
-// 110		| M		  | memory reference M, the addressed location is specified by the HL reg
-// 111		| A		  | 
-//uint8_t* i8080Emulator::DecodeOpcodeRegister(uint8_t opcode3bit)
-//{
-//	switch (opcode3bit & 0b111)
-//	{
-//	case Registers8080::B:
-//		return &m_Cpu->b;
-//	case 0b001:
-//		return &m_Cpu->c;
-//	case 0b010:
-//		return &m_Cpu->d;
-//	case 0b011:
-//		return &m_Cpu->e;
-//	case 0b100:
-//		return &m_Cpu->h;
-//	case 0b101:
-//		return &m_Cpu->l;
-//	case 0b110:
-//		return &(m_Memory[ReadRegisterPair(RegisterPairs8080::HL)]);
-//	case 0b111:
-//		return &m_Cpu->a;
-//	default:
-//		assert(!"should never get here!");
-//		return nullptr;
-//	}
-//}
+//invert carry flag
+void i8080Emulator::CMC() {
+	m_Cpu->ConditionBits.c = !m_Cpu->ConditionBits.c;
+	m_Cpu->pc += 1;
+}
 
-//// (0x40 - 0x75), (0x77 - 0x7F) | MOV
 void i8080Emulator::MOV() {
 
 	const auto src = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
 	const auto dest = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode, 3);
 
-	if (m_Cpu->pc == 0x099A)
-	{
-		std::cout << "set score to: " << int(m_Cpu->ReadRegister(src)) << '\n';
-	}
-
 	m_Cpu->SetRegister(dest, m_Cpu->ReadRegister(src));
 	m_Cpu->pc += 1;
 }
-////
-//////////////////////
-//////////////
-//// 0x76 | XXX not done yet
+
+//halt
 void i8080Emulator::HLT() {
 	m_Cpu->halt = true;
 	m_Cpu->pc += 1;
 }
 
+//add a register/mem value onto A, and update all flags
 void i8080Emulator::ADD() {
-	if (m_Cpu->pc == 0x099B)
-	{
-		std::cout << "add\n";
-	}
-
 	Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
 
 	uint16_t sum = m_Cpu->a + m_Cpu->ReadRegister(reg);
@@ -608,6 +475,7 @@ void i8080Emulator::ADD() {
 	m_Cpu->pc += 1;
 }
 
+//add a register/mem value + carry bit onto A, update registers
 void i8080Emulator::ADC() {
 	Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
 
@@ -619,9 +487,9 @@ void i8080Emulator::ADC() {
 	m_Cpu->pc += 1;
 }
 
+//sub a register/mem value from A, and update all flags
 void i8080Emulator::SUB() {
 	const Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
-
 
 	// 2s complement subtraction, done in 4bit amounts, for AC
 	const uint8_t decrement = ~m_Cpu->ReadRegister(reg);
@@ -639,6 +507,7 @@ void i8080Emulator::SUB() {
 	m_Cpu->pc += 1;
 }
 
+//add a register/mem value - carry bit onto A
 void i8080Emulator::SBB() {
 	const Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
 
@@ -658,12 +527,8 @@ void i8080Emulator::SBB() {
 	m_Cpu->pc += 1;
 }
 
+//bitwise AND a register/mem value with A
 void i8080Emulator::ANA() {
-	if(m_Cpu->pc == 0x151B)
-	{
-		std::cout << "Checking if alien is alive" << "\n";
-	}
-
 	const Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
 
 	const uint16_t result = m_Cpu->a & m_Cpu->ReadRegister(reg);
@@ -675,6 +540,7 @@ void i8080Emulator::ANA() {
 	m_Cpu->pc += 1;
 }
 
+//bitwise XOR a register/mem value with A, update registers
 void i8080Emulator::XRA() {
 	const Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
 
@@ -687,6 +553,7 @@ void i8080Emulator::XRA() {
 	m_Cpu->pc += 1;
 }
 
+//bitwise OR a register/mem value with A, update registers
 void i8080Emulator::ORA() {
 	const Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
 
@@ -698,6 +565,7 @@ void i8080Emulator::ORA() {
 	m_Cpu->pc += 1;
 }
 
+//compare a register/mem value with A, update registers
 void i8080Emulator::CMP() {
 	const Registers8080 reg = m_Cpu->GetRegisterFromOpcode(m_CurrentOpcode);
 
@@ -706,31 +574,29 @@ void i8080Emulator::CMP() {
 	m_Cpu->ConditionBits.c = (result & 0xFF00) != 0;
 	m_Cpu->UpdateFlags(uint8_t(result));
 
-	if (m_Cpu->pc == 0x1500)
-	{
-		std::cout << "Compaire to shots cord's \n";
-	}
-
 	m_Cpu->pc += 1;
 }
 
-// 0xC0 | return on nonzero
+//return on nonzero
 void i8080Emulator::RNZ() {
 	RETURN((m_Cpu->ConditionBits.z == false));
 }
 
+//jump to address from after m_Cpu->pc if non zero
 void i8080Emulator::JNZ() {
 	JUMP(m_Cpu->ConditionBits.z == false);
 }
 
+//normal jump
 void i8080Emulator::JMP() {
 	JUMP(true);
 }
 
+//call if not zero
 void i8080Emulator::CNZ() {
 	CALLif(m_Cpu->ConditionBits.z == false);
 }
-
+//adds a byte onto A, fetched after m_Cpu->pc
 void i8080Emulator::ADI() {
 	uint16_t sum = m_Cpu->a + m_Memory[m_Cpu->pc + 1];
 	m_Cpu->a = (sum & 0xFF);
@@ -738,42 +604,52 @@ void i8080Emulator::ADI() {
 	m_Cpu->UpdateFlags(m_Cpu->a);
 	m_Cpu->pc += OPCODES[0xC6].sizeBytes;
 }
-//
-//// 0xC7 | calls to 0H 
+
 void i8080Emulator::RST() {
 	const uint8_t address = (m_CurrentOpcode & 0b00111000);
-	RESET(address);
+	RESTART(address);
 }
-//
-//// 0xC8 | return if Z
+
+//return if Z
 void i8080Emulator::RZ() {
 	RETURN(m_Cpu->ConditionBits.z);
 }
-//
-//// 0xC9 | standard return
+
+//return
 void i8080Emulator::RET() {
 	RETURN(true);
 }
-//
-//// 0xCA |
-//Jump if zero
+
+//jump if zero
 void i8080Emulator::JZ() {
 	JUMP(m_Cpu->ConditionBits.z);
 }
 
+//call if Z flag set
 void i8080Emulator::CZ() {
 	CALLif(m_Cpu->ConditionBits.z);
 }
-//
-//// 0xCD | store m_Cpu->pc on stack, and jump to a new location
+
+//store m_Cpu->pc on stack, and jump to a new location
 void i8080Emulator::CALL() {
 	CALLif(true);
 }
 
+//add carry bit and Byte onto A
+void i8080Emulator::ACI() {
+	uint16_t sum = m_Cpu->a + m_Memory[m_Cpu->pc + 1] + (uint8_t)m_Cpu->ConditionBits.c;
+	m_Cpu->a = (sum & 0xFF);
+	m_Cpu->ConditionBits.c = sum > 0xFF00;
+	m_Cpu->UpdateFlags(m_Cpu->a);
+	m_Cpu->pc += 2;
+}
+
+//return if Cy = 0
 void i8080Emulator::RNC() {
 	RETURN(m_Cpu->ConditionBits.c == false);
 }
 
+//jump when carry = 0
 void i8080Emulator::JNC() {
 	JUMP(m_Cpu->ConditionBits.c == false);
 }
@@ -795,12 +671,13 @@ void i8080Emulator::OUT() {
 
 	m_Cpu->pc += OPCODES[0xD3].sizeBytes;
 }
-//
-//// 0xD4 | call on carry = false
+
+//call on carry = false
 void i8080Emulator::CNC() {
 	CALLif((m_Cpu->ConditionBits.c == false));
 }
 
+//subtract a byte from A
 void i8080Emulator::SUI() {
 	uint16_t result = m_Cpu->a - m_Memory[m_Cpu->pc + 1];
 	m_Cpu->a = (result & 0xFF);
@@ -809,10 +686,12 @@ void i8080Emulator::SUI() {
 	m_Cpu->pc += 2;
 }
 
+//return if CY = 1
 void i8080Emulator::RC() {
 	RETURN(m_Cpu->ConditionBits.c);
 }
 
+//jump if cy = 1
 void i8080Emulator::JC() {
 	JUMP(m_Cpu->ConditionBits.c);
 }
@@ -830,15 +709,13 @@ void i8080Emulator::IN() {
 
 	m_Cpu->pc += OPCODES[0xDB].sizeBytes;
 }
-//
-//// 0xDC | call if cy =1
+
+//call if cy =1
 void i8080Emulator::CC() {
 	CALLif(m_Cpu->ConditionBits.c);
 }
-//
-//// 0xDD | not 8080 code
-//
-//// 0xDE | sub byte and cy from A
+
+//sub byte and cy from A
 void i8080Emulator::SBI() {
 	uint16_t sum = m_Cpu->a - m_Memory[m_Cpu->pc + 1] - (uint8_t)m_Cpu->ConditionBits.c;
 	m_Cpu->a = (sum & 0xFF);
@@ -847,16 +724,18 @@ void i8080Emulator::SBI() {
 	m_Cpu->pc += 2;
 }
 
+//return if P = 0
 void i8080Emulator::RPO() {
 	RETURN(m_Cpu->ConditionBits.p == 0);
 }
 
+//jump if p = 0
 void i8080Emulator::JPO() {
 	JUMP(m_Cpu->ConditionBits.p == 0);
 }
-//
-//// 0xE3 | exchange HL and SP data
-//// L <-> (SP) | H <-> (SP+1)
+
+//exchange HL and SP data
+//L <-> (SP) | H <-> (SP+1)
 void i8080Emulator::XTHL() {
 	const uint16_t stackContents = (m_Memory[m_Cpu->sp + 1] << 8) | m_Memory[m_Cpu->sp];
 	MemWrite(m_Cpu->sp, m_Cpu->l);
@@ -864,12 +743,13 @@ void i8080Emulator::XTHL() {
 	m_Cpu->SetRegisterPair(RegisterPairs8080::HL, stackContents);
 	m_Cpu->pc += 1;
 }
-//
-//// 0xE4 | call if p = 0
+
+//call if p = 0
 void i8080Emulator::CPO() {
 	CALLif(m_Cpu->ConditionBits.p == 0);
 }
 
+//bitwise AND byte with A
 void i8080Emulator::ANI() {
 	uint16_t result = m_Cpu->a & m_Memory[m_Cpu->pc + 1];
 	m_Cpu->a = (result & 0xFF);
@@ -879,51 +759,65 @@ void i8080Emulator::ANI() {
 	m_Cpu->pc += OPCODES[0xE6].sizeBytes;
 }
 
+//return if p = 1
 void i8080Emulator::RPE() {
 	RETURN(m_Cpu->ConditionBits.p);
 }
 
+//set pc to HL
 void i8080Emulator::PCHL() {
 	m_Cpu->pc = m_Cpu->ReadRegisterPair(RegisterPairs8080::HL);
 }
 
+//jump if p = 1
 void i8080Emulator::JPE() {
 	JUMP(m_Cpu->ConditionBits.p);
 }
-//
-//// 0xEB | exchange HL and DE
+
+//exchange HL and DE
 void i8080Emulator::XCHG() {
 	uint16_t oldDE = m_Cpu->ReadRegisterPair(RegisterPairs8080::DE);
 	m_Cpu->SetRegisterPair(RegisterPairs8080::DE, m_Cpu->l, m_Cpu->h);//uint16_t(m_Cpu->h << 8) | m_Cpu->l);
 	m_Cpu->SetRegisterPair(RegisterPairs8080::HL, oldDE);
 	m_Cpu->pc += OPCODES[0xEB].sizeBytes;
 }
-//
-//// 0xEC | call if p = 1
+
+//call if p = 1
 void i8080Emulator::CPE() {
 	CALLif(m_Cpu->ConditionBits.p);
 }
 
+//XOR A with a byte
+void i8080Emulator::XRI() {
+	uint16_t sum = m_Cpu->a ^ m_Memory[m_Cpu->pc + 1];
+	m_Cpu->a = (sum & 0xFF);
+	m_Cpu->ConditionBits.c = sum > 0xFF00;
+	m_Cpu->UpdateFlags(m_Cpu->a);
+	m_Cpu->pc += OPCODES[0xEE].sizeBytes;
+}
+
+//return if positive
 void i8080Emulator::RP() {
 	RETURN(m_Cpu->ConditionBits.s == false);
 }
 
-
+//jump if positive
 void i8080Emulator::JP() {
 	JUMP(m_Cpu->ConditionBits.s == false);
 }
-//
-//// 0xF3 | Disable Interrupts
+
+//disable Interrupts
 void i8080Emulator::DI() {
 	m_Cpu->interruptsEnabled = false;
 	m_Cpu->pc += 1;
 }
-//
+
 //call if positive
 void i8080Emulator::CP() {
 	CALLif(m_Cpu->ConditionBits.s == false);
 }
 
+//biwise OR A with a byte
 void i8080Emulator::ORI() {
 	const uint16_t result = m_Cpu->a | m_Memory[m_Cpu->pc + 1];
 	m_Cpu->a = (result & 0xFF);
@@ -932,45 +826,41 @@ void i8080Emulator::ORI() {
 	m_Cpu->pc += 2;
 }
 
+//return if minus
 void i8080Emulator::RM() {
 	RETURN(m_Cpu->ConditionBits.s == true);
 }
 
+//sets SP to HL
+void i8080Emulator::SPHL() {
+	m_Cpu->sp = m_Cpu->ReadRegisterPair(RegisterPairs8080::HL);
+	m_Cpu->pc += OPCODES[0xF9].sizeBytes;
+}
+
+//jump if minus
 void i8080Emulator::JM() {
 	JUMP(m_Cpu->ConditionBits.s == true);
 }
-//
-//// 0xFB | Enable Interrrupts
+
+//enable Interrrupts
 void i8080Emulator::EI() {
 	m_Cpu->interruptsEnabled = true;
 	m_Cpu->pc += 1;
 }
-//
-//// 0xFC | call if minus
+
+//call if minus
 void i8080Emulator::CM() {
 	CALLif(m_Cpu->ConditionBits.s == true);
 }
-//
-//// 0xFD | not 8080 code
 
 //ComPare Immediate with Accumulator
 //See page 29 8080-Programmers-Manual
 void i8080Emulator::CPI() {
-	if (m_Cpu->pc == 0x03D2 && m_Cpu->a == 5)
-	{
-		std::cout << "Shot blowing up not bc of alien 03D2" << "\n";
-	}
-
 	const uint8_t result = m_Cpu->a - m_Memory[m_Cpu->pc + 1];
 	m_Cpu->ConditionBits.c = m_Cpu->a < m_Memory[m_Cpu->pc + 1];
 	m_Cpu->UpdateFlags(result);
-	if (m_Cpu->pc == 0x14FB)
-	{
-		std::cout << "Alien down in shield? 14FB" << std::boolalpha << bool(!m_Cpu->ConditionBits.c) << "\n";
-	}
 	m_Cpu->pc += OPCODES[0xFE].sizeBytes;
 }
-
 
 #pragma endregion OpcodeFunctions
 
