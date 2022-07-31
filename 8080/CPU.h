@@ -30,10 +30,8 @@ private:
 	Registers8080 GetRegisterFromOpcode(uint8_t opcode, uint8_t shift = 0) const;
 
 private:
-	//temp
-	bool printDebug{ false };
-	friend int main(int argc, char** argv);
 	friend class i8080Emulator;
+	friend class Keyboard;
 
 	//no ownership
 	i8080Emulator* m_I8080;
@@ -79,15 +77,15 @@ private:
 	//file://Resources/8080-Programmers-Manual.pdf ConditionBits p.11 in pdf or p.5 in the book
 	struct
 	{
-		bool c : 1;  //carry, set if the last addition operation resulted in a carry 
+		bool c	: 1;  //carry, set if the last addition operation resulted in a carry 
 							// or last sub required borrow
-		bool : 1;
-		bool p : 1;  //parity bit, set if the number of true bits in the result is even
-		bool : 1;
-		bool ac : 1; //auxiliary carry bit for binary coded decimal arithmetic 
-		bool : 1;
-		bool z : 1;  //zero bit, set if the result is zero 
-		bool s : 1;  //sign bit, set if the result is negative
+		bool	: 1;
+		bool p	: 1;  //parity bit, set if the number of true bits in the result is even
+		bool	: 1;
+		bool ac : 1;  //auxiliary carry bit for binary coded decimal arithmetic 
+		bool	: 1;
+		bool z	: 1;  //zero bit, set if the result is zero 
+		bool s	: 1;  //sign bit, set if the result is negative
 	} ConditionBits{};
 
 };
@@ -104,12 +102,12 @@ enum class RegisterPairs8080
 //based 8080-Programmers-Manual page 16-17
 enum class Registers8080
 {
-	B = 0b000,
-	C = 0b001,
-	D = 0b010,
-	E = 0b011,
-	H = 0b100,
-	L = 0b101,
+	B	= 0b000,
+	C	= 0b001,
+	D	= 0b010,
+	E	= 0b011,
+	H	= 0b100,
+	L	= 0b101,
 	MEM = 0b110, //memory reference M, the addressed location is specified by the HL reg
-	A = 0b111,
+	A	= 0b111,
 };

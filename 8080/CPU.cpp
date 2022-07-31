@@ -3,7 +3,7 @@
 #include <cassert>
 #include <iomanip>
 #include <iostream>
-#include "i8080Disassembler.h"
+#include "i8080Emulator.h"
 
 CPU::CPU(i8080Emulator* emulatorRef)
 	: m_I8080(emulatorRef)
@@ -119,7 +119,8 @@ void CPU::SetRegisterPair(RegisterPairs8080 pair, uint8_t LSByte, uint8_t MSByte
 		l = LSByte;
 		break;
 	case RegisterPairs8080::SP:
-		sp = uint16_t(m_I8080->ReadMem(pc + 2) << 8) | m_I8080->ReadMem(pc + 1);
+		//sp = uint16_t(m_I8080->ReadMem(pc + 2) << 8) | m_I8080->ReadMem(pc + 1);
+		sp = uint16_t(MSByte << 8) | LSByte;
 		break;
 	default:
 		assert(!"should never get here!");

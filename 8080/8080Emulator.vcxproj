@@ -159,15 +159,17 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="8080Emulator.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="CPU.cpp" />
     <ClCompile Include="Display.cpp" />
-    <ClCompile Include="i8080Disassembler.cpp" />
+    <ClCompile Include="i8080Emulator.cpp" />
+    <ClCompile Include="Keyboard.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CPU.h" />
     <ClInclude Include="Display.h" />
-    <ClInclude Include="i8080Disassembler.h" />
+    <ClInclude Include="i8080Emulator.h" />
+    <ClInclude Include="Keyboard.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="i8080.props" />
