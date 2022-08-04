@@ -7,7 +7,7 @@ All 255 opcodes have been implemented and tested, also some dedicated shift hard
 <br>
 <br>
 As the 8080 is a microprocessor and not a complete machine like a Gameboy, it does not have a standard input or sound, only some ports that can receive and send signals.
-So for sending keyboard signals I used Qt as these are not really part of emulating an 8080, emulating a sound card used in old arcade machines might be a fun project for the future.
+So for sending keyboard signals I used Qt as these are not really part of emulating an 8080. For now there's no sound but emulating a sound card used in old arcade machines might be a fun project for the future.
 
 <br>
 
