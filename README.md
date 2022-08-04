@@ -11,14 +11,9 @@ So for sending keyboard signals I used Qt as these are not really part of emulat
 
 <br>
 
-## How to install:
+![8080-gif](Images/Animation2.gif)
 
-```
-mkdir build
-cd build
-cmake ..
-cmake --build .
-```
+<br>
 
 ## Controlls (Space invaders):
 
@@ -29,6 +24,25 @@ cmake --build .
 [D]     Move Right
 [Space] Shoot
 [Del]   Tilt
+```
+<br>
+
+### Dissasembleing ROM's:
+<img src="Images/DissasembelingROM.png" style=" width:70% ; height:70% ">
+
+### Passed MICROCOSM ASSOCIATES 8080/8085 CPU DIAGNOSTIC:
+<img src="Images/TestSuccess.png" style=" width:70% ; height:70% ">
+
+### Easy debugging:
+<img src="Images/Debugging1.png" style=" width:70% ; height:70% ">
+
+## How to install:
+
+```
+mkdir build
+cd build
+cmake ..
+cmake --build .
 ```
 
 ## Sources:
