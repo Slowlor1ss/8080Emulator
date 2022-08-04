@@ -9,21 +9,26 @@ All 255 opcodes have been implemented and tested, also some dedicated shift hard
 As the 8080 is a microprocessor and not a complete machine like a Gameboy, it does not have a standard input or sound, only some ports that can receive and send signals.
 So for sending keyboard signals I used Qt as these are not really part of emulating an 8080, emulating a sound card used in old arcade machines might be a fun project for the future.
 
- 
 <br>
 
 ## How to install:
 
+```
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
 
 ## Controlls (Space invaders):
 
 ```
-[Shift] Insert Coin<br>
-[1 - 2] Choose Player<br>
-[A]     Move Left<br>
-[D]     Move Right<br>
-[Space] Shoot<br>
-[Del]   Tilt<br>
+[Shift] Insert Coin
+[1 - 2] Choose Player
+[A]     Move Left
+[D]     Move Right
+[Space] Shoot
+[Del]   Tilt
 ```
 
 ## Sources:
