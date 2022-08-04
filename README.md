@@ -37,5 +37,5 @@ http://www.emulator101.com/reference/8080-by-opcode.html<br>
 https://computerarcheology.com/Arcade/SpaceInvaders/Code.html<br>
 https://computerarcheology.com/Arcade/SpaceInvaders/<br>
 https://computerarcheology.com/Arcade/SpaceInvaders/Hardware.html<br>
-[8080-Programmers-Manual.pdf](main/Resources/8080-Programmers-Manual.pdf)<br>
+[8080-Programmers-Manual.pdf](Resources/8080-Programmers-Manual.pdf)<br>
 https://en.wikipedia.org/wiki/Intel_8080<br>
