@@ -1,6 +1,6 @@
 # 8080 Emulator
 
-A 8080 microprocessor emulator that can run classic space invaders and some COM programs, I mainly chose this emulator to learn more about emulator development and low-level programming.
+A complete 8080 microprocessor emulator that can run classic space invaders and some COM programs, I mainly chose this emulator to learn more about emulator development and low-level programming.
 <br>
 <br>
 All 255 opcodes have been implemented and tested, also some dedicated shift hardware has been emulated as space invaders use this for moving pixels on the screen and thus adds a hardware shift register to help with the math.
